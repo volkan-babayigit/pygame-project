@@ -1,39 +1,42 @@
-import pygame
-import random
-import math
-
 # --- Constants ---
 WIDTH, HEIGHT = 800, 600
-NUM_SQUARES = 100
+NUM_SQUARES = 50
 MIN_SIZE = 10
 MAX_SIZE = 50
 FPS = 60
-TURN_ANGLE = 0.1   # maximum random turn in radians per frame
+TURN_ANGLE = 0.1
 
 
 class Square:
-    def __init__(self):
+    def __init__(self, x=None, y=None):
         self.size = random.randint(MIN_SIZE, MAX_SIZE)
 
-        self.x = random.randint(0, WIDTH - self.size)
-        self.y = random.randint(0, HEIGHT - self.size)
+        # Position
+        if x is None:
+            self.x = random.randint(0, WIDTH - self.size)
+        else:
+            self.x = x
 
-        # Speed (size-based)
+        if y is None:
+            self.y = random.randint(0, HEIGHT - self.size)
+        else:
+            self.y = y
+
+        # Speed depends on size
         self.speed = max(1, 60 / self.size)
 
-        # Random direction
+        # Direction
         angle = random.uniform(0, 2 * math.pi)
         self.dx = math.cos(angle) * self.speed
         self.dy = math.sin(angle) * self.speed
 
-        # 🎨 Random main color
+        # Colors
         self.color = (
             random.randint(50, 255),
             random.randint(50, 255),
             random.randint(50, 255)
         )
 
-        # Border color (slightly darker)
         self.border_color = (
             max(0, self.color[0] - 80),
             max(0, self.color[1] - 80),
@@ -41,7 +44,7 @@ class Square:
         )
 
     def rotate_velocity(self):
-        theta = random.uniform(-0.1, 0.1)
+        theta = random.uniform(-TURN_ANGLE, TURN_ANGLE)
 
         new_dx = self.dx * math.cos(theta) - self.dy * math.sin(theta)
         new_dy = self.dx * math.sin(theta) + self.dy * math.cos(theta)
@@ -65,13 +68,10 @@ class Square:
     def draw(self, screen):
         rect = pygame.Rect(int(self.x), int(self.y), self.size, self.size)
 
-        # 🎨 Fill
         pygame.draw.rect(screen, self.color, rect)
-
-        # 🔲 Border
         pygame.draw.rect(screen, self.border_color, rect, 2)
 
-        # ✨ Inner decoration (small center square)
+        # Inner square
         inner_size = self.size // 3
         inner_rect = pygame.Rect(
             rect.centerx - inner_size // 2,
@@ -79,20 +79,23 @@ class Square:
             inner_size,
             inner_size
         )
-
         pygame.draw.rect(screen, self.border_color, inner_rect)
 
+
 def create_squares():
-    squares = []
-    for _ in range(NUM_SQUARES):
-        squares.append(Square())
-    return squares
+    return [Square() for _ in range(NUM_SQUARES)]
 
 
-def handle_events():
+def handle_events(squares):
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             return False
+
+        # Mouse click → add square
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            x, y = pygame.mouse.get_pos()
+            squares.append(Square(x, y))
+
     return True
 
 
@@ -109,21 +112,28 @@ def draw_squares(screen, squares):
 def main():
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Randomly Turning Squares")
+    pygame.display.set_caption("Random Squares")
 
     clock = pygame.time.Clock()
     squares = create_squares()
 
+    font = pygame.font.SysFont(None, 28)
+
     running = True
     while running:
-        running = handle_events()
+        running = handle_events(squares)
 
         update_squares(squares)
 
         screen.fill((0, 0, 0))
         draw_squares(screen, squares)
-        pygame.display.flip()
 
+        # Info text
+        text = f"Squares: {len(squares)} | Click to add | Close window to exit"
+        text_surface = font.render(text, True, (255, 255, 255))
+        screen.blit(text_surface, (20, 20))
+
+        pygame.display.flip()
         clock.tick(FPS)
 
     pygame.quit()
